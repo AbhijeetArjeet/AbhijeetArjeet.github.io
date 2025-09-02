@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Attendance Scanner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>NFC Attendance Scanner</h1>
+            <div class="nfc-status" id="nfcStatus">
+                <div class="nfc-status__indicator" id="nfcIndicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span class="status-text" id="statusText">Checking NFC...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- NFC Error Display -->
+        <div class="error-panel hidden" id="errorPanel">
+            <div class="error-panel__content">
+                <h3>NFC Not Available</h3>
+                <p id="errorMessage">Checking NFC compatibility...</p>
+                <div class="error-instructions" id="errorInstructions"></div>
+            </div>
+        </div>
+
+        <!-- Main Application (hidden by default) -->
+        <main class="main-content hidden" id="mainContent">
+            <!-- Mode Selection -->
+            <div class="mode-selector" id="modeSelector">
+                <h2>Select Mode</h2>
+                <div class="mode-buttons">
+                    <button class="btn btn--primary btn--lg" id="scanModeBtn">
+                        <span class="btn-icon">📱</span>
+                        Scan Attendance
+                    </button>
+                    <button class="btn btn--secondary btn--lg" id="addStudentModeBtn">
+                        <span class="btn-icon">👤</span>
+                        Add Student
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scan Attendance Mode -->
+            <div class="scan-mode hidden" id="scanMode">
+                <div class="mode-header">
+                    <button class="btn btn--outline btn--sm" id="backToModeSelect">← Back</button>
+                    <h2>Scan Attendance</h2>
+                </div>
+
+                <div class="scan-controls">
+                    <button class="btn btn--primary btn--lg btn--full-width" id="startScanBtn">
+                        Start NFC Scanning
+                    </button>
+                    <div class="scan-status" id="scanStatus">
+                        <p>Ready to scan. Press "Start NFC Scanning" to begin.</p>
+                    </div>
+                </div>
+
+                <div class="scan-results">
+                    <div class="scan-stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalScans">0</span>
+                            <span class="stat-label">Total Scans</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="uniqueScans">0</span>
+                            <span class="stat-label">Unique Students</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scan-list-header">
+                        <h3>Scan Results</h3>
+                        <button class="btn btn--outline btn--sm" id="clearScansBtn">Clear All</button>
+                    </div>
+                    <div class="scan-list" id="scanList">
+                        <p class="empty-state">No scans yet. Hold an NFC tag to your device to scan.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Student Mode -->
+            <div class="add-student-mode hidden" id="addStudentMode">
+                <div class="mode-header">
+                    <button class="btn btn--outline btn--sm" id="backToModeSelect2">← Back</button>
+                    <h2>Add Student</h2>
+                </div>
+
+                <div class="student-form">
+                    <div class="form-group">
+                        <label class="form-label" for="studentName">Student Name</label>
+                        <input type="text" class="form-control" id="studentName" placeholder="Enter student name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="studentId">Student ID</label>
+                        <input type="text" class="form-control" id="studentId" placeholder="e.g., CS2023001" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="studentSection">Section</label>
+                        <select class="form-control" id="studentSection" required>
+                            <option value="">Select section</option>
+                            <option value="CS-A">CS-A</option>
+                            <option value="CS-B">CS-B</option>
+                            <option value="EE-A">EE-A</option>
+                            <option value="EE-B">EE-B</option>
+                            <option value="ME-A">ME-A</option>
+                            <option value="ME-B">ME-B</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">RFID Tag</label>
+                        <div class="rfid-input-group">
+                            <button class="btn btn--primary" id="scanRfidBtn">Scan NFC Tag</button>
+                            <span class="input-divider">OR</span>
+                            <input type="text" class="form-control" id="manualRfid" placeholder="Enter RFID manually (e.g., 04A1B2C3)">
+                        </div>
+                        <div class="rfid-status" id="rfidStatus">
+                            <p>Click "Scan NFC Tag" and hold an NFC tag to your device</p>
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn--primary btn--lg btn--full-width" id="addStudentBtn">Add Student</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Modal -->
+        <div class="modal hidden" id="loadingModal">
+            <div class="modal-content">
+                <div class="loading-spinner"></div>
+                <p>Processing NFC scan...</p>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div class="modal hidden" id="successModal">
+            <div class="modal-content">
+                <h3>Success!</h3>
+                <p id="successMessage">Operation completed successfully</p>
+                <button class="btn btn--primary" id="closeSuccessModal">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
