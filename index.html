@@ -1,11 +1,195 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Scan NFC ID Cards</title>
-    </head>
-    <body>
-        <h2>NFC Scanner</h2>
-        <button id="scanNFCButton" onclick="startNFCScan();">Scan</button>
-        <script src="app.js"></script>
-    </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Attendance Scanner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>NFC Attendance Scanner</h1>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+        </header>
+
+        <!-- Home Screen -->
+        <div class="screen active" id="homeScreen">
+            <div class="home-content">
+                <div class="home-card">
+                    <h2>Welcome</h2>
+                    <p>Choose an option to continue:</p>
+                    
+                    <div class="mode-buttons">
+                        <button class="btn btn--primary btn--lg mode-btn" id="scanModeBtn">
+                            <span class="btn-icon">📱</span>
+                            <span class="btn-text">
+                                <strong>Scan Attendance</strong>
+                                <small>Collect RFID scans for verification</small>
+                            </span>
+                        </button>
+                        
+                        <button class="btn btn--secondary btn--lg mode-btn" id="addStudentModeBtn">
+                            <span class="btn-icon">👨‍🎓</span>
+                            <span class="btn-text">
+                                <strong>Add Student</strong>
+                                <small>Register new students with RFID</small>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="nfc-status card" id="nfcStatus">
+                    <div class="status-indicator" id="nfcIndicator">
+                        <span class="status-dot"></span>
+                        <span id="nfcStatusText">Checking NFC support...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan Attendance Screen -->
+        <div class="screen" id="scanScreen">
+            <div class="screen-header">
+                <button class="btn btn--outline btn--sm" id="backFromScan">← Back</button>
+                <h2>Scan Attendance</h2>
+                <div class="scan-counter">
+                    <span class="counter-label">Scans:</span>
+                    <span class="counter-value" id="scanCount">0</span>
+                </div>
+            </div>
+
+            <div class="scan-content">
+                <div class="scan-controls">
+                    <button class="btn btn--primary btn--lg scan-btn" id="startScanBtn">
+                        <span class="scan-icon">📡</span>
+                        Start Scanning
+                    </button>
+                    <div class="scan-status" id="scanStatus">Ready to scan</div>
+                </div>
+
+                <div class="scan-list-container">
+                    <div class="scan-list-header">
+                        <h3>Scanned Tags</h3>
+                        <button class="btn btn--outline btn--sm" id="clearAllBtn">Clear All</button>
+                    </div>
+                    <div class="scan-list" id="scanList">
+                        <div class="empty-state">
+                            <span class="empty-icon">📋</span>
+                            <p>No scans yet. Start scanning to collect RFID tags.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scan-actions">
+                    <button class="btn btn--primary btn--full-width" id="sendToServerBtn" disabled>
+                        Send to Server
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Student Screen -->
+        <div class="screen" id="addStudentScreen">
+            <div class="screen-header">
+                <button class="btn btn--outline btn--sm" id="backFromAddStudent">← Back</button>
+                <h2>Add Student</h2>
+            </div>
+
+            <div class="add-student-content">
+                <form class="student-form" id="studentForm">
+                    <div class="form-group">
+                        <label for="studentName" class="form-label">Student Name *</label>
+                        <input type="text" id="studentName" class="form-control" placeholder="Enter student's full name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="applicationNumber" class="form-label">Application Number *</label>
+                        <input type="text" id="applicationNumber" class="form-control" placeholder="Enter application number" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="section" class="form-label">Section *</label>
+                        <select id="section" class="form-control" required>
+                            <option value="">Select a section</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rfidTag" class="form-label">RFID Tag *</label>
+                        <div class="rfid-input-group">
+                            <input type="text" id="rfidTag" class="form-control" placeholder="Scan or enter RFID tag" required>
+                            <button type="button" class="btn btn--primary scan-rfid-btn" id="scanRfidBtn">
+                                📡 Scan
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn--primary btn--full-width">
+                            💾 Save Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div class="screen" id="resultsScreen">
+            <div class="screen-header">
+                <button class="btn btn--outline btn--sm" id="backFromResults">← Back</button>
+                <h2>Verification Results</h2>
+            </div>
+
+            <div class="results-content">
+                <div class="results-summary" id="resultsSummary">
+                    <!-- Summary will be populated by JavaScript -->
+                </div>
+
+                <div class="results-sections">
+                    <div class="results-section" id="verifiedSection">
+                        <h3>✅ Verified Students</h3>
+                        <div class="student-list" id="verifiedList"></div>
+                    </div>
+
+                    <div class="results-section" id="unrecognizedSection">
+                        <h3>❌ Unrecognized Tags</h3>
+                        <div class="tag-list" id="unrecognizedList"></div>
+                    </div>
+                </div>
+
+                <div class="results-actions">
+                    <button class="btn btn--primary btn--full-width" id="newScanBtn">
+                        Start New Scan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal hidden" id="confirmModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <h3 id="modalTitle">Confirm Action</h3>
+            <p id="modalMessage">Are you sure you want to proceed?</p>
+            <div class="modal-actions">
+                <button class="btn btn--outline" id="modalCancel">Cancel</button>
+                <button class="btn btn--primary" id="modalConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
 </html>
