@@ -36,6 +36,7 @@ class NFCAttendanceScanner {
         // Mode selection
         document.getElementById('scanModeBtn').addEventListener('click', () => this.showScanMode());
         document.getElementById('addStudentModeBtn').addEventListener('click', () => this.showAddStudentMode());
+        document.getElementById('retryBtn').addEventListener('click', () => this.checkNFCSupport());
 
         // Back buttons
         document.getElementById('backToModeSelect').addEventListener('click', () => this.showModeSelector());
