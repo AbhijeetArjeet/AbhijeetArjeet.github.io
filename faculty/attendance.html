@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Take Attendance</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 30px; background: #f4f4f9; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background: #007BFF; color: white; }
+    .present { color: green; font-weight: bold; }
+    .absent { color: red; font-weight: bold; }
+    button { margin-top: 20px; padding: 10px 15px; border: none; background: #28a745; color: white; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #218838; }
+  </style>
+</head>
+<body>
+  <h1>Take Attendance</h1>
+  <h2 id="class-details"></h2>
+  
+  <table id="attendance-table">
+    <thead>
+      <tr>
+        <th>Roll No</th>
+        <th>Name</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <button id="finalizeBtn">Finalize Attendance</button>
+
+  <script>
+    async function loadAttendance() {
+      const token = localStorage.getItem("token");
+      const schedule_id = sessionStorage.getItem("schedule_id");
+      const section_name = sessionStorage.getItem("section_name");
+      const classroom_name = sessionStorage.getItem("classroom_name");
+
+      if (!token || !schedule_id) {
+        alert("Invalid access.");
+        window.location.href = "../index.html";
+        return;
+      }
+
+      document.getElementById("class-details").textContent =
+        `Section: ${section_name}, Classroom: ${classroom_name}`;
+
+      try {
+        const response = await fetch(`https://gameocoder-backend.onrender.com/faculty/attendance/${schedule_id}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        const tbody = document.querySelector("#attendance-table tbody");
+        tbody.innerHTML = "";
+
+        data.students.forEach(student => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${student.roll_no}</td>
+            <td>${student.name}</td>
+            <td>
+              <input type="checkbox" ${student.present ? "checked" : ""} />
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Error loading attendance");
+      }
+    }
+
+    // Finalize Attendance
+    document.getElementById("finalizeBtn").addEventListener("click", async () => {
+      const token = localStorage.getItem("token");
+      const schedule_id = sessionStorage.getItem("schedule_id");
+
+      const rows = document.querySelectorAll("#attendance-table tbody tr");
+      const finalized = Array.from(rows).map(row => {
+        const roll_no = row.children[0].textContent;
+        const name = row.children[1].textContent;
+        const present = row.querySelector("input").checked;
+        return { roll_no, name, present };
+      });
+
+      try {
+        const res = await fetch(`https://gameocoder-backend.onrender.com/faculty/finalize/${schedule_id}`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ finalized })
+        });
+
+        const result = await res.json();
+        alert(result.message || "Attendance finalized successfully");
+        window.location.href = "./index.html";
+      } catch (err) {
+        console.error(err);
+        alert("Error finalizing attendance");
+      }
+    });
+
+    loadAttendance();
+  </script>
+</body>
+</html>

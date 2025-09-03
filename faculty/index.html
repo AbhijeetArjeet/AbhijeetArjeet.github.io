@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Faculty Dashboard</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <h1>Faculty Dashboard</h1>
+  <div id="class-info">
+    <p>Loading your current class...</p>
+    <button id="attendanceBtn" style="display:none;">Go to Attendance</button>
+  </div>
+  <button id="logoutBtn">Logout</button>
+
+  <script>
+    async function fetchCurrentClass() {
+      const token = localStorage.getItem("token");
+
+    //   if (!token) {
+    //     alert("Not logged in!");
+    //     window.location.href = "../index.html";
+    //     return;
+    //   }
+
+      try {
+        const response = await fetch("https://gameocoder-backend.onrender.com/faculty/current-class", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        const data = await response.json();
+        const classInfoDiv = document.getElementById("class-info");
+
+        if (!response.ok) {
+          classInfoDiv.innerHTML = `<p class="no-class">${data.message || "Error fetching schedule"}</p>`;
+          return;
+        }
+
+        if (data && data.class) {
+            const { section_name, classroom_name, start_time, end_time, schedule_id } = data.class;
+            // Save schedule info to sessionStorage for next page
+            sessionStorage.setItem("schedule_id", schedule_id);
+            sessionStorage.setItem("section_name", section_name);
+            sessionStorage.setItem("classroom_name", classroom_name);
+
+            document.getElementById("attendanceBtn").style.display = "block";
+            document.getElementById("attendanceBtn").onclick = () => {
+                window.location.href = "./attendance.html";
+            };
+        } else {
+          classInfoDiv.innerHTML = `<p class="no-class">No class right now</p>`;
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("class-info").innerHTML =
+          `<p class="no-class">Error: Could not connect to server</p>`;
+      }
+    }
+
+    // Logout handler
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("token");
+      window.location.href = "../index.html";
+    });
+
+    // On page load
+    fetchCurrentClass();
+  </script>
+</body>
+</html>

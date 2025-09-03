@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Attendance Scanner - Bulk Mode</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>NFC Attendance Scanner</h1>
+            <p class="header-subtitle">Bulk Collection Mode - Scan First, Submit Later</p>
+            <div class="nfc-status" id="nfcStatus">
+                <div class="nfc-status__indicator" id="nfcIndicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span class="status-text" id="statusText">Checking NFC...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- NFC Error Display -->
+        <div class="error-panel hidden" id="errorPanel">
+            <div class="error-panel__content">
+                <h3>NFC Not Available</h3>
+                <p id="errorMessage">Checking NFC compatibility...</p>
+                <div class="error-instructions" id="errorInstructions"></div>
+                <button class="btn btn--secondary" id="retryBtn">Retry NFC Check</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content hidden" id="mainContent">
+            
+            <!-- Mode Selector -->
+            <div class="mode-selector" id="modeSelector">
+                <h2>Select Mode</h2>
+                <div class="mode-buttons">
+                    <button class="btn btn--primary btn--lg" id="scanModeBtn">
+                        <span class="btn-icon">📱</span>
+                        <div>
+                            <div class="mode-title">Bulk Attendance</div>
+                            <div class="mode-description">Collect scans, then submit all at once</div>
+                        </div>
+                    </button>
+                    <button class="btn btn--secondary btn--lg" id="addStudentModeBtn">
+                        <span class="btn-icon">👤</span>
+                        <div>
+                            <div class="mode-title">Add Student</div>
+                            <div class="mode-description">Register new student with NFC tag</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scan Attendance Mode -->
+            <div class="scan-mode hidden" id="scanMode">
+                <div class="mode-header">
+                    <button class="btn btn--outline" id="backToModeSelect">← Back</button>
+                    <h2>Bulk Attendance Collection</h2>
+                </div>
+
+                <!-- Schedule Selection -->
+                <div class="schedule-section card">
+                    <div class="card__body">
+                        <h3>Select Schedule</h3>
+                        <div class="schedule-controls">
+                            <select id="scheduleSelect" class="form-control">
+                                <option value="">Loading schedules...</option>
+                            </select>
+                            <button class="btn btn--secondary btn--sm" id="refreshSchedules">🔄 Refresh</button>
+                        </div>
+                        <div class="schedule-info" id="scheduleInfo">
+                            <p>Please select a schedule to begin scanning</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scanning Controls -->
+                <div class="scan-controls card">
+                    <div class="card__body">
+                        <h3>Scanning Controls</h3>
+                        <div class="control-buttons">
+                            <button class="btn btn--primary btn--full-width" id="startScanBtn" disabled>Start NFC Scanning</button>
+                            <div class="bulk-controls">
+                                <button class="btn btn--primary" id="freezeAttendanceBtn" style="display: none;">
+                                    Freeze Attendance
+                                </button>
+                                <button class="btn btn--primary" id="submitAttendanceBtn" style="display: none;">
+                                    Submit Attendance
+                                </button>
+                            </div>
+                            <button class="btn btn--outline" id="clearScansBtn">Clear All Scans</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scan Status -->
+                <div class="scan-status card" id="scanStatus">
+                    <div class="card__body">
+                        <p>Select a schedule to begin scanning.</p>
+                    </div>
+                </div>
+
+                <!-- Scan Statistics -->
+                <div class="scan-stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="totalScans">0</span>
+                        <span class="stat-label">Total Scans</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="uniqueScans">0</span>
+                        <span class="stat-label">Unique Students</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="successfulScans">0</span>
+                        <span class="stat-label">Successful</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="failedScans">0</span>
+                        <span class="stat-label">Failed</span>
+                    </div>
+                </div>
+
+                <!-- How It Works -->
+                <div class="workflow-info card">
+                    <div class="card__body">
+                        <h3>📋 How It Works</h3>
+                        <ol>
+                            <li><strong>Students scan freely:</strong> All scans stored locally on device</li>
+                            <li><strong>Teacher freezes attendance:</strong> Stops accepting new scans</li>
+                            <li><strong>Review & submit:</strong> Send all attendance to server at once</li>
+                        </ol>
+                        <div class="workflow-benefits">
+                            <strong>Benefits:</strong> No server overload, single API call, offline-capable
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scan Results -->
+                <div class="scan-results card">
+                    <div class="card__body">
+                        <h3>Scan Results</h3>
+                        <div class="scan-list" id="scanList">
+                            <p class="no-scans">No scans yet. Hold an NFC tag to your device to scan.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Student Mode -->
+            <div class="add-student-mode hidden" id="addStudentMode">
+                <div class="mode-header">
+                    <button class="btn btn--outline" id="backToModeSelect2">← Back</button>
+                    <h2>Add Student</h2>
+                </div>
+
+                <div class="student-form card">
+                    <div class="card__body">
+                        <div class="form-group">
+                            <label for="studentName" class="form-label">Student Name</label>
+                            <input type="text" id="studentName" class="form-control" placeholder="Enter full name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="studentId" class="form-label">Student ID</label>
+                            <input type="text" id="studentId" class="form-control" placeholder="Enter student ID" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="studentSection" class="form-label">Section</label>
+                            <select id="studentSection" class="form-control" required>
+                                <option value="">Select Section</option>
+                                <option value="S33">S33</option>
+                                <option value="S34">S34</option>
+                                <option value="S35">S35</option>
+                                <option value="S36">S36</option>
+                                <option value="S37">S37</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="manualRfid" class="form-label">RFID Tag</label>
+                            <div class="rfid-input-group">
+                                <input type="text" id="manualRfid" class="form-control" placeholder="Scan or enter RFID manually" required>
+                                <button type="button" class="btn btn--secondary" id="scanRfidBtn">Scan NFC Tag</button>
+                            </div>
+                            <div class="rfid-status" id="rfidStatus">
+                                <p>Click "Scan NFC Tag" and hold an NFC tag to your device</p>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" class="btn btn--primary btn--full-width" id="addStudentBtn">Add Student</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Success Modal -->
+        <div class="modal hidden" id="successModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Success!</h3>
+                    <button class="btn btn--outline btn--sm" id="closeSuccessModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage">Operation completed successfully!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Modal -->
+        <div class="modal hidden" id="loadingModal">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="loading-spinner"></div>
+                    <p id="loadingMessage">Processing...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script-updated.js"></script>
+</body>
+</html>

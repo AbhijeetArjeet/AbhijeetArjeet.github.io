@@ -1,0 +1,30 @@
+body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f4f4f9;
+    }
+    h1 {
+      color: #333;
+    }
+    #class-info {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .no-class {
+      color: red;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 15px;
+      border: none;
+      background: #007BFF;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
