@@ -13,7 +13,7 @@ class NFCAttendanceScanner {
         this.bulkSubmitted = false; // NEW: Track if bulk has been submitted
         
         // API Configuration
-        this.API_BASE_URL = 'https://gameocoder-backend.github.io/faculty'; // Simplified for local server
+        this.API_BASE_URL = 'https://gameocoder-backend.onrender.com/faculty'; // Simplified for local server
         
         // Statistics
         this.stats = {
