@@ -289,39 +289,53 @@ class NFCAttendanceScanner {
         this.updateNFCStatus('loading', 'Checking NFC support...');
         
         try {
+            // Check HTTPS requirement
             if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
                 throw new Error('HTTPS_REQUIRED');
             }
 
+            // Check Web NFC API support
             if (!('NDEFReader' in window)) {
                 throw new Error('NOT_SUPPORTED');
             }
 
+            // Test NFC availability with a more robust approach
             const reader = new NDEFReader();
             const controller = new AbortController();
+            
+            // Set a timeout for the NFC check
             const checkTimeout = setTimeout(() => {
                 controller.abort();
             }, 3000);
 
             try {
+                // Try to start scanning briefly to test NFC availability
                 await reader.scan({ signal: controller.signal });
+                
+                // If we reach here without error, NFC is likely available
                 clearTimeout(checkTimeout);
-                controller.abort();
+                controller.abort(); // Stop the test scan
+                
                 this.nfcSupported = true;
                 this.nfcEnabled = true;
                 this.updateNFCStatus('success', 'NFC Ready');
                 this.showMainContent();
+                
             } catch (error) {
                 clearTimeout(checkTimeout);
+                
                 if (error.name === 'AbortError') {
+                    // Timeout occurred - assume NFC is available but we can't test definitively
                     this.nfcSupported = true;
                     this.nfcEnabled = true;
                     this.updateNFCStatus('success', 'NFC Ready (assumed)');
                     this.showMainContent();
                 } else {
+                    // Handle specific NFC errors
                     throw error;
                 }
             }
+            
         } catch (error) {
             console.log('NFC Check Error:', error);
             this.handleNFCError(error.message || error.name);
