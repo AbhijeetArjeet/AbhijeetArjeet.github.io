@@ -19,7 +19,8 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     });
 
     if (res.ok) {
-      const token = await res.json().token();
+      const data = await res.json();
+      const token = data.token;
       localStorage.setItem("authToken", token);
       alert("Logged in online as " + username);
       window.location.href = "/faculty/index.html";
