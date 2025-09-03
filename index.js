@@ -12,13 +12,16 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       
   try {
     // 🔹 Try backend login first
-    const res = await fetch("/login", {
+    const res = await fetch("https://gameocoder-backend.onrender.com/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
     });
 
     if (res.ok) {
+      const token = await res.text().token();
+      localStorage.setItem("authToken", token);
+      alert("Logged in online as " + username);
       window.location.href = "/faculty/index.html";
     } else {
       throw new Error("Invalid credentials (backend)");
