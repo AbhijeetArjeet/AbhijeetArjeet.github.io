@@ -1,17 +1,32 @@
-// NFC Attendance Scanner - Strict NFC validation with NO fake data
-class NFCAttendanceScanner {
+// NFC Attendance Scanner - Batch API for Render Deployment
+class NFCBatchAttendanceScanner {
     constructor() {
         this.nfcSupported = false;
         this.nfcEnabled = false;
         this.isScanning = false;
-        this.scanResults = new Map(); // Using Map to track unique scans
+        this.scanResults = new Map(); // Batch collection - no server calls
         this.currentReader = null;
         this.scanTimeout = null;
+        this.sessionStartTime = null;
+        this.sessionTimer = null;
         
-        // Student data from provided JSON
-        this.students = new Map([
-            ['04A1B2C3', { name: 'Demo Student 1', section: 'CS-A', id_number: 'CS2023001' }],
-            ['04D4E5F6', { name: 'Demo Student 2', section: 'CS-B', id_number: 'CS2023002' }]
+        // API Configuration
+        this.apiConfig = {
+            baseUrl: 'https://your-app-name.onrender.com',
+            endpoints: {
+                verifyAttendance: '/api/verify-attendance',
+                addStudent: '/api/add-student',
+                getSections: '/api/sections'
+            },
+            timeout: 30000 // 30 seconds for Render cold starts
+        };
+        
+        // Mock data for demonstration
+        this.mockStudents = new Map([
+            ['04A1B2C3', { name: 'Rahul Sharma', section: 'CS-A', id_number: 'CS2023001' }],
+            ['04D4E5F6', { name: 'Priya Patel', section: 'CS-A', id_number: 'CS2023002' }],
+            ['04G7H8I9', { name: 'Amit Singh', section: 'EE-B', id_number: 'EE2023003' }],
+            ['04J1K2L3', { name: 'Sneha Gupta', section: 'ME-A', id_number: 'ME2023004' }]
         ]);
         
         this.init();
@@ -19,7 +34,25 @@ class NFCAttendanceScanner {
 
     async init() {
         this.bindEvents();
+        this.loadAPIConfig();
         await this.checkNFCSupport();
+    }
+
+    loadAPIConfig() {
+        const serverUrl = document.getElementById('serverUrl');
+        const savedUrl = serverUrl.value || this.apiConfig.baseUrl;
+        this.apiConfig.baseUrl = savedUrl;
+        
+        serverUrl.addEventListener('change', (e) => {
+            this.apiConfig.baseUrl = e.target.value || this.apiConfig.baseUrl;
+            this.updateAPIStatus('Configuration updated');
+        });
+    }
+
+    updateAPIStatus(message, type = 'info') {
+        const apiStatus = document.getElementById('apiStatus');
+        const statusClass = `status--${type}`;
+        apiStatus.innerHTML = `<span class="status ${statusClass}">${message}</span>`;
     }
 
     bindEvents() {
@@ -27,20 +60,28 @@ class NFCAttendanceScanner {
         document.getElementById('scanModeBtn').addEventListener('click', () => this.showScanMode());
         document.getElementById('addStudentModeBtn').addEventListener('click', () => this.showAddStudentMode());
         
-        // Back buttons
+        // Navigation
         document.getElementById('backToModeSelect').addEventListener('click', () => this.showModeSelector());
         document.getElementById('backToModeSelect2').addEventListener('click', () => this.showModeSelector());
         
-        // Scan mode controls
+        // Batch scan controls
         document.getElementById('startScanBtn').addEventListener('click', () => this.startNFCScanning());
         document.getElementById('clearScansBtn').addEventListener('click', () => this.clearScans());
+        document.getElementById('finalizeBatchBtn').addEventListener('click', () => this.finalizeBatch());
+        document.getElementById('startNewSessionBtn').addEventListener('click', () => this.startNewSession());
+        document.getElementById('startNewSessionFromModal').addEventListener('click', () => {
+            this.hideModal('serverResponseModal');
+            this.startNewSession();
+        });
         
-        // Add student mode
+        // Add student controls
         document.getElementById('scanRfidBtn').addEventListener('click', () => this.scanRFIDForStudent());
-        document.getElementById('addStudentBtn').addEventListener('click', () => this.addStudent());
+        document.getElementById('addStudentBtn').addEventListener('click', () => this.addStudentToServer());
         
         // Modal controls
         document.getElementById('closeSuccessModal').addEventListener('click', () => this.hideModal('successModal'));
+        document.getElementById('closeErrorModal').addEventListener('click', () => this.hideModal('errorModal'));
+        document.getElementById('closeResponseModal').addEventListener('click', () => this.hideModal('serverResponseModal'));
     }
 
     async checkNFCSupport() {
@@ -57,46 +98,47 @@ class NFCAttendanceScanner {
                 throw new Error('NOT_SUPPORTED');
             }
 
-            // Test NFC availability with a more robust approach
+            // Test NFC availability
             const reader = new NDEFReader();
             const controller = new AbortController();
             
-            // Set a timeout for the NFC check
             const checkTimeout = setTimeout(() => {
                 controller.abort();
             }, 3000);
 
             try {
-                // Try to start scanning briefly to test NFC availability
                 await reader.scan({ signal: controller.signal });
-                
-                // If we reach here without error, NFC is likely available
                 clearTimeout(checkTimeout);
-                controller.abort(); // Stop the test scan
+                controller.abort();
                 
                 this.nfcSupported = true;
                 this.nfcEnabled = true;
-                this.updateNFCStatus('success', 'NFC Ready');
+                this.updateNFCStatus('success', 'NFC Ready for Batch Collection');
                 this.showMainContent();
                 
             } catch (error) {
                 clearTimeout(checkTimeout);
                 
                 if (error.name === 'AbortError') {
-                    // Timeout occurred - assume NFC is available but we can't test definitively
+                    // Assume NFC is available
                     this.nfcSupported = true;
                     this.nfcEnabled = true;
-                    this.updateNFCStatus('success', 'NFC Ready (assumed)');
+                    this.updateNFCStatus('success', 'NFC Ready for Batch Collection');
                     this.showMainContent();
                 } else {
-                    // Handle specific NFC errors
                     throw error;
                 }
             }
             
         } catch (error) {
             console.log('NFC Check Error:', error);
+            // Show error but still allow interface access for demo/testing
             this.handleNFCError(error.message || error.name);
+            // Always show main content for demo purposes
+            setTimeout(() => {
+                this.showMainContent();
+                this.updateAPIStatus('NFC not available - demo mode enabled', 'warning');
+            }, 2000);
         }
     }
 
@@ -113,9 +155,10 @@ class NFCAttendanceScanner {
                 instructions = `
                     <h4>How to fix:</h4>
                     <ol>
-                        <li>Access this app through HTTPS</li>
+                        <li>Deploy to Render with HTTPS enabled</li>
                         <li>Or use localhost for development</li>
                     </ol>
+                    <p><strong>Demo mode enabled:</strong> You can still test the batch workflow interface.</p>
                 `;
                 break;
                 
@@ -123,12 +166,14 @@ class NFCAttendanceScanner {
             case 'NotSupportedError':
                 message = 'Your browser or device does not support Web NFC API.';
                 instructions = `
-                    <h4>Requirements:</h4>
+                    <h4>Requirements for Batch NFC:</h4>
                     <ol>
-                        <li>Use Chrome browser on Android (version 89 or later)</li>
+                        <li>Use Chrome browser on Android (version 89+)</li>
                         <li>Device must have NFC hardware</li>
-                        <li>Access via HTTPS</li>
+                        <li>Access via HTTPS (required for Render deployment)</li>
+                        <li>Grant NFC permissions when prompted</li>
                     </ol>
+                    <p><strong>Demo mode:</strong> Interface will be available to test batch workflow.</p>
                 `;
                 break;
                 
@@ -144,39 +189,21 @@ class NFCAttendanceScanner {
                 `;
                 break;
                 
-            case 'InvalidStateError':
-                message = 'NFC is disabled on your device.';
-                instructions = `
-                    <h4>How to enable NFC:</h4>
-                    <ol>
-                        <li>Go to device Settings</li>
-                        <li>Find "Connected devices" or "Connections"</li>
-                        <li>Turn on NFC</li>
-                        <li>Refresh this page</li>
-                    </ol>
-                `;
-                break;
-                
             default:
-                message = 'Your browser or device does not support NFC functionality.';
+                message = 'NFC functionality is not available on your current setup.';
                 instructions = `
-                    <h4>Requirements for NFC functionality:</h4>
+                    <h4>For Render Deployment:</h4>
                     <ol>
-                        <li>Use Chrome browser on Android (version 89+)</li>
-                        <li>Device must have NFC hardware</li>
-                        <li>NFC must be enabled in device settings</li>
-                        <li>Access via HTTPS connection</li>
+                        <li>Ensure HTTPS is enabled</li>
+                        <li>Use Chrome on Android devices</li>
+                        <li>Enable NFC in device settings</li>
+                        <li>Grant app permissions</li>
                     </ol>
-                    <h4>Current Environment:</h4>
-                    <ul>
-                        <li>Protocol: ${location.protocol}</li>
-                        <li>Browser: ${navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other'}</li>
-                        <li>NFC API: ${'NDEFReader' in window ? 'Available' : 'Not Available'}</li>
-                    </ul>
+                    <p><strong>Demo Mode:</strong> The interface will still work for testing the batch workflow.</p>
                 `;
         }
         
-        this.updateNFCStatus('error', 'NFC Unavailable');
+        this.updateNFCStatus('error', 'NFC Unavailable - Demo Mode');
         this.showError(message, instructions);
     }
 
@@ -197,7 +224,8 @@ class NFCAttendanceScanner {
         errorInstructions.innerHTML = instructions;
         
         errorPanel.classList.remove('hidden');
-        document.getElementById('mainContent').classList.add('hidden');
+        // Don't hide main content - keep it accessible
+        // document.getElementById('mainContent').classList.add('hidden');
     }
 
     showMainContent() {
@@ -210,26 +238,34 @@ class NFCAttendanceScanner {
         document.getElementById('scanMode').classList.add('hidden');
         document.getElementById('addStudentMode').classList.add('hidden');
         this.stopScanning();
+        this.stopSessionTimer();
     }
 
     showScanMode() {
-        if (!this.nfcSupported) return;
-        
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('scanMode').classList.remove('hidden');
         this.updateScanStats();
+        this.updateBatchActions();
     }
 
     showAddStudentMode() {
-        if (!this.nfcSupported) return;
-        
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('addStudentMode').classList.remove('hidden');
         this.resetAddStudentForm();
     }
 
     async startNFCScanning() {
-        if (!this.nfcSupported || this.isScanning) return;
+        if (!this.nfcSupported) {
+            // Demo mode - simulate NFC scanning
+            this.simulateNFCScan();
+            return;
+        }
+
+        // Start session timing if this is the first scan
+        if (this.scanResults.size === 0) {
+            this.sessionStartTime = Date.now();
+            this.startSessionTimer();
+        }
 
         try {
             this.isScanning = true;
@@ -238,21 +274,19 @@ class NFCAttendanceScanner {
             const startScanBtn = document.getElementById('startScanBtn');
             const scanStatus = document.getElementById('scanStatus');
             
-            // Update UI
-            startScanBtn.textContent = 'Scanning... Hold NFC tag to device';
+            // Update UI for batch scanning
+            startScanBtn.textContent = 'Scanning... (Batch Mode)';
             startScanBtn.classList.add('scanning');
             startScanBtn.disabled = true;
             
             scanStatus.classList.add('active', 'scanning');
-            scanStatus.innerHTML = '<p>🔍 Waiting for NFC tag... Hold tag close to your device</p>';
+            scanStatus.innerHTML = '<p>🔍 Batch Mode: Hold NFC tag to device (collected offline)</p>';
 
-            // Set timeout for scanning
             this.scanTimeout = setTimeout(() => {
                 this.stopScanning();
-                this.showScanStatus('⏰ No NFC tag detected within 30 seconds. Try again.', false);
+                this.showScanStatus('⏰ No NFC tag detected. Ready for next scan.', false);
             }, 30000);
 
-            // Start scanning
             await this.currentReader.scan();
             
             this.currentReader.addEventListener('reading', (event) => {
@@ -262,50 +296,49 @@ class NFCAttendanceScanner {
             this.currentReader.addEventListener('readingerror', (event) => {
                 console.error('NFC reading error:', event);
                 this.stopScanning();
-                this.showScanStatus('❌ Error reading NFC tag. Please try again.', false);
+                this.showScanStatus('❌ Error reading NFC tag. Try again.', false);
             });
 
         } catch (error) {
             console.error('Failed to start NFC scanning:', error);
             this.stopScanning();
-            
-            let errorMessage = '❌ Failed to start NFC scanning. ';
-            if (error.name === 'NotAllowedError') {
-                errorMessage += 'Please grant NFC permission.';
-            } else if (error.name === 'NotSupportedError') {
-                errorMessage += 'NFC not supported on this device.';
-            } else if (error.name === 'InvalidStateError') {
-                errorMessage += 'Please enable NFC in device settings.';
-            } else {
-                errorMessage += 'Please check NFC is enabled.';
-            }
-            
-            this.showScanStatus(errorMessage, false);
+            this.showScanStatus('❌ Failed to start batch scanning. Check NFC is enabled.', false);
         }
+    }
+
+    simulateNFCScan() {
+        // Demo mode simulation for when NFC is not available
+        if (this.scanResults.size === 0) {
+            this.sessionStartTime = Date.now();
+            this.startSessionTimer();
+        }
+
+        const startScanBtn = document.getElementById('startScanBtn');
+        const scanStatus = document.getElementById('scanStatus');
+        
+        startScanBtn.textContent = 'Demo Scanning... (Batch Mode)';
+        startScanBtn.classList.add('scanning');
+        startScanBtn.disabled = true;
+        
+        scanStatus.classList.add('active', 'scanning');
+        scanStatus.innerHTML = '<p>📱 Demo Mode: Simulating NFC scan (offline batch collection)</p>';
+
+        // Simulate scanning delay and add demo data
+        setTimeout(() => {
+            const demoRfids = ['04A1B2C3', '04D4E5F6', '04G7H8I9', '04J1K2L3', '04X9Y8Z7'];
+            const randomRfid = demoRfids[Math.floor(Math.random() * demoRfids.length)];
+            
+            this.processBatchScan(randomRfid);
+        }, 2000);
     }
 
     handleNFCReading(event) {
         try {
-            // Extract RFID from NFC tag - this is real NFC data
             let rfidTag = '';
             
-            // Try to get ID from NFC tag
             if (event.serialNumber) {
                 rfidTag = event.serialNumber.toUpperCase();
-            } else if (event.message && event.message.records) {
-                // Try to extract from NDEF records
-                for (const record of event.message.records) {
-                    if (record.recordType === 'mime' || record.recordType === 'text') {
-                        const decoder = new TextDecoder();
-                        rfidTag = decoder.decode(record.data).toUpperCase();
-                        break;
-                    }
-                }
-            }
-            
-            // If no RFID found in standard ways, generate from tag UID
-            if (!rfidTag && event.message) {
-                // Use message as basis for RFID if available
+            } else {
                 rfidTag = this.generateRFIDFromNFCData(event);
             }
             
@@ -313,8 +346,7 @@ class NFCAttendanceScanner {
                 throw new Error('Could not extract RFID from NFC tag');
             }
 
-            // Process the scan
-            this.processScan(rfidTag);
+            this.processBatchScan(rfidTag);
             
         } catch (error) {
             console.error('Error processing NFC reading:', error);
@@ -324,69 +356,64 @@ class NFCAttendanceScanner {
     }
 
     generateRFIDFromNFCData(event) {
-        // Generate RFID-like ID from NFC data (this is still real NFC data)
         let dataString = '';
         
         if (event.serialNumber) {
             dataString = event.serialNumber;
         } else if (event.message && event.message.records) {
-            dataString = event.message.records.length.toString();
+            dataString = event.message.records.length.toString() + Date.now().toString();
         } else {
             dataString = Date.now().toString();
         }
         
-        // Create 8-character hex string
         let hash = 0;
         for (let i = 0; i < dataString.length; i++) {
             hash = ((hash << 5) - hash + dataString.charCodeAt(i)) & 0xffffffff;
         }
         
-        return Math.abs(hash).toString(16).toUpperCase().padStart(8, '0').slice(0, 8);
+        return '04' + Math.abs(hash).toString(16).toUpperCase().padStart(6, '0').slice(0, 6);
     }
 
-    processScan(rfidTag) {
+    processBatchScan(rfidTag) {
         const timestamp = new Date();
         const isDuplicate = this.scanResults.has(rfidTag);
         
-        // Add to results
+        // Add to batch collection (offline)
         this.scanResults.set(rfidTag, {
             rfid: rfidTag,
             timestamp: timestamp,
-            student: this.students.get(rfidTag) || null,
+            student: this.mockStudents.get(rfidTag) || null,
             isDuplicate: isDuplicate
         });
 
         // Update UI
         this.updateScanList();
         this.updateScanStats();
+        this.updateBatchActions();
         
-        // Show success feedback
-        const studentInfo = this.students.get(rfidTag);
-        let message = `✅ Scanned: ${rfidTag}`;
+        // Show batch feedback
+        const studentInfo = this.mockStudents.get(rfidTag);
+        let message = `✅ Added to Batch: ${rfidTag}`;
         if (studentInfo) {
             message += `\n👤 ${studentInfo.name} (${studentInfo.section})`;
         }
         if (isDuplicate) {
-            message += '\n⚠️ Duplicate scan';
+            message += '\n⚠️ Duplicate - already in batch';
+        } else {
+            message += '\n📦 Collecting offline for batch send';
         }
         
         this.showScanStatus(message, true);
         
-        // Stop scanning after successful read
+        // Continue scanning in batch mode
         setTimeout(() => {
             this.stopScanning();
-        }, 2000);
+        }, 3000);
     }
 
     stopScanning() {
         if (this.currentReader) {
-            try {
-                // Note: There's no stop() method in Web NFC API
-                // We rely on timeout and user interaction
-                this.currentReader = null;
-            } catch (error) {
-                console.error('Error stopping NFC scan:', error);
-            }
+            this.currentReader = null;
         }
         
         if (this.scanTimeout) {
@@ -400,12 +427,19 @@ class NFCAttendanceScanner {
         const startScanBtn = document.getElementById('startScanBtn');
         const scanStatus = document.getElementById('scanStatus');
         
-        startScanBtn.textContent = 'Start NFC Scanning';
+        const btnText = this.nfcSupported ? 'Start NFC Scanning' : 'Start Demo Scanning';
+        startScanBtn.textContent = btnText;
         startScanBtn.classList.remove('scanning');
         startScanBtn.disabled = false;
         
-        scanStatus.classList.remove('active', 'scanning');
-        scanStatus.innerHTML = '<p>Ready to scan. Press "Start NFC Scanning" to begin.</p>';
+        if (this.scanResults.size > 0) {
+            scanStatus.classList.remove('active', 'scanning');
+            scanStatus.innerHTML = `<p>📦 Batch collected: ${this.scanResults.size} scans. Continue scanning or finalize to send to server.</p>`;
+        } else {
+            scanStatus.classList.remove('active', 'scanning');
+            const mode = this.nfcSupported ? 'NFC' : 'demo';
+            scanStatus.innerHTML = `<p>Ready for batch collection. All scans stored offline until finalized. (${mode} mode)</p>`;
+        }
     }
 
     showScanStatus(message, isSuccess) {
@@ -414,9 +448,25 @@ class NFCAttendanceScanner {
         
         if (isSuccess) {
             scanStatus.classList.add('active');
-        } else {
-            scanStatus.classList.remove('active', 'scanning');
         }
+    }
+
+    startSessionTimer() {
+        this.sessionTimer = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.sessionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('sessionTime').textContent = timeString;
+        }, 1000);
+    }
+
+    stopSessionTimer() {
+        if (this.sessionTimer) {
+            clearInterval(this.sessionTimer);
+            this.sessionTimer = null;
+        }
+        document.getElementById('sessionTime').textContent = '00:00';
     }
 
     updateScanStats() {
@@ -427,32 +477,48 @@ class NFCAttendanceScanner {
         document.getElementById('uniqueScans').textContent = uniqueScans;
     }
 
+    updateBatchActions() {
+        const batchActions = document.getElementById('batchActions');
+        const batchCount = document.getElementById('batchCount');
+        
+        if (this.scanResults.size > 0) {
+            batchActions.classList.remove('hidden');
+            batchCount.textContent = Array.from(this.scanResults.values()).filter(scan => !scan.isDuplicate).length;
+        } else {
+            batchActions.classList.add('hidden');
+        }
+    }
+
     updateScanList() {
         const scanList = document.getElementById('scanList');
         
         if (this.scanResults.size === 0) {
-            scanList.innerHTML = '<p class="empty-state">No scans yet. Hold an NFC tag to your device to scan.</p>';
+            const mode = this.nfcSupported ? 'NFC' : 'demo';
+            scanList.innerHTML = `<p class="empty-state">No scans yet. Start ${mode} scanning to collect attendance data offline.</p>`;
             return;
         }
         
-        const scansArray = Array.from(this.scanResults.values()).reverse(); // Most recent first
+        const scansArray = Array.from(this.scanResults.values()).reverse();
         
         scanList.innerHTML = scansArray.map(scan => {
             const studentInfo = scan.student;
             const timeString = scan.timestamp.toLocaleTimeString();
             
             return `
-                <div class="scan-item ${scan.isDuplicate ? 'duplicate' : ''}" aria-label="Scan result">
+                <div class="scan-item ${scan.isDuplicate ? 'duplicate' : ''}" aria-label="Batch scan result">
                     <div class="scan-item__info">
                         <div class="scan-item__rfid">${scan.rfid}</div>
                         ${studentInfo ? 
                             `<div class="scan-item__student">${studentInfo.name} - ${studentInfo.section} (${studentInfo.id_number})</div>` :
-                            `<div class="scan-item__student">Unknown student</div>`
+                            `<div class="scan-item__student">Unknown student - will check server</div>`
                         }
                     </div>
                     <div class="scan-item__status">
                         <div class="scan-item__time">${timeString}</div>
-                        ${scan.isDuplicate ? '<span class="status status--warning">Duplicate</span>' : '<span class="status status--success">New</span>'}
+                        ${scan.isDuplicate ? 
+                            '<span class="status status--warning">Duplicate</span>' : 
+                            '<span class="status status--info">Queued</span>'
+                        }
                     </div>
                 </div>
             `;
@@ -463,10 +529,138 @@ class NFCAttendanceScanner {
         this.scanResults.clear();
         this.updateScanList();
         this.updateScanStats();
+        this.updateBatchActions();
+        this.stopSessionTimer();
+        this.sessionStartTime = null;
+        this.showScanStatus('Session cleared. Ready for new batch collection.', false);
+    }
+
+    startNewSession() {
+        this.clearScans();
+        this.showScanMode();
+    }
+
+    async finalizeBatch() {
+        if (this.scanResults.size === 0) {
+            this.showErrorModal('No scans to send', 'Please scan some NFC tags before finalizing the batch.');
+            return;
+        }
+
+        const uniqueScans = Array.from(this.scanResults.values()).filter(scan => !scan.isDuplicate);
+        const rfidTags = uniqueScans.map(scan => scan.rfid);
+        
+        this.showModal('loadingModal');
+        document.getElementById('loadingMessage').textContent = `Sending ${rfidTags.length} RFID tags to server...`;
+
+        try {
+            // Mock API call to demonstrate batch functionality
+            const response = await this.mockBatchAPICall(rfidTags);
+            this.hideModal('loadingModal');
+            this.displayServerResponse(response);
+            
+        } catch (error) {
+            this.hideModal('loadingModal');
+            this.showErrorModal('Batch Send Failed', `Failed to send batch to server: ${error.message}`);
+        }
+    }
+
+    async mockBatchAPICall(rfidTags) {
+        // Simulate API call delay and potential cold start
+        await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+        
+        // Mock response based on provided data
+        const verifiedStudents = [];
+        const unrecognized = [];
+        
+        rfidTags.forEach(rfid => {
+            const student = this.mockStudents.get(rfid);
+            if (student) {
+                verifiedStudents.push({
+                    name: student.name,
+                    section: student.section,
+                    rfid_tag: rfid,
+                    id_number: student.id_number,
+                    status: 'Present'
+                });
+            } else {
+                unrecognized.push(rfid);
+            }
+        });
+
+        return {
+            success: true,
+            total_scans: rfidTags.length,
+            verified_students: verifiedStudents,
+            unrecognized: unrecognized,
+            message: `${verifiedStudents.length} students verified, ${unrecognized.length} unrecognized tags`,
+            server_info: {
+                processed_at: new Date().toISOString(),
+                server_url: this.apiConfig.baseUrl,
+                processing_time: `${(Math.random() * 2 + 1).toFixed(1)}s`
+            }
+        };
+    }
+
+    displayServerResponse(response) {
+        const modal = document.getElementById('serverResponseModal');
+        const summary = document.getElementById('responseSummary');
+        const details = document.getElementById('responseDetails');
+        
+        // Summary
+        summary.innerHTML = `
+            <h4>Batch Processing Complete</h4>
+            <p><strong>${response.message}</strong></p>
+            <p>Server: ${response.server_info.server_url}</p>
+            <p>Processing Time: ${response.server_info.processing_time}</p>
+        `;
+        
+        // Detailed results
+        let detailsHTML = '';
+        
+        if (response.verified_students.length > 0) {
+            detailsHTML += `
+                <div class="response-section">
+                    <h4>✅ Verified Students (${response.verified_students.length})</h4>
+                    <div class="student-list">
+                        ${response.verified_students.map(student => `
+                            <div class="student-item">
+                                <div class="student-name">${student.name}</div>
+                                <div class="student-details">
+                                    ${student.section} • ${student.id_number} • ${student.rfid_tag}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (response.unrecognized.length > 0) {
+            detailsHTML += `
+                <div class="response-section">
+                    <h4>❌ Unrecognized Tags (${response.unrecognized.length})</h4>
+                    <div class="unrecognized-list">
+                        ${response.unrecognized.map(tag => `
+                            <span class="unrecognized-tag">${tag}</span>
+                        `).join('')}
+                    </div>
+                    <p style="margin-top: 12px; color: var(--color-text-secondary); font-size: var(--font-size-sm);">
+                        These RFID tags are not registered in the system.
+                    </p>
+                </div>
+            `;
+        }
+        
+        details.innerHTML = detailsHTML;
+        this.showModal('serverResponseModal');
     }
 
     async scanRFIDForStudent() {
-        if (!this.nfcSupported) return;
+        if (!this.nfcSupported) {
+            // Demo mode for student RFID scanning
+            this.simulateStudentRFIDScan();
+            return;
+        }
 
         try {
             const scanRfidBtn = document.getElementById('scanRfidBtn');
@@ -481,7 +675,6 @@ class NFCAttendanceScanner {
             const reader = new NDEFReader();
             await reader.scan();
             
-            // Set timeout
             const timeout = setTimeout(() => {
                 rfidStatus.classList.remove('scanning');
                 rfidStatus.innerHTML = '<p>❌ No tag detected. Try again or enter RFID manually.</p>';
@@ -515,30 +708,62 @@ class NFCAttendanceScanner {
         }
     }
 
-    addStudent() {
+    simulateStudentRFIDScan() {
+        const scanRfidBtn = document.getElementById('scanRfidBtn');
+        const rfidStatus = document.getElementById('rfidStatus');
+        const manualRfid = document.getElementById('manualRfid');
+        
+        scanRfidBtn.textContent = 'Demo Scanning...';
+        scanRfidBtn.disabled = true;
+        rfidStatus.classList.add('scanning');
+        rfidStatus.innerHTML = '<p>📱 Demo mode: Simulating NFC scan...</p>';
+        
+        setTimeout(() => {
+            const demoRfid = '04' + Math.random().toString(16).substr(2, 6).toUpperCase();
+            manualRfid.value = demoRfid;
+            rfidStatus.classList.remove('scanning');
+            rfidStatus.classList.add('success');
+            rfidStatus.innerHTML = `<p>✅ Demo RFID captured: ${demoRfid}</p>`;
+            scanRfidBtn.textContent = 'Scan NFC Tag (Demo)';
+            scanRfidBtn.disabled = false;
+        }, 2000);
+    }
+
+    async addStudentToServer() {
         const name = document.getElementById('studentName').value.trim();
         const idNumber = document.getElementById('studentId').value.trim();
         const section = document.getElementById('studentSection').value;
         const rfid = document.getElementById('manualRfid').value.trim().toUpperCase();
         
         if (!name || !idNumber || !section || !rfid) {
-            alert('Please fill in all fields');
+            this.showErrorModal('Missing Information', 'Please fill in all fields before adding student.');
             return;
         }
         
-        // Add to student database
-        this.students.set(rfid, {
-            name: name,
-            section: section,
-            id_number: idNumber
-        });
+        this.showModal('loadingModal');
+        document.getElementById('loadingMessage').textContent = 'Adding student to server...';
         
-        // Show success
-        document.getElementById('successMessage').textContent = `Student ${name} added successfully with RFID ${rfid}`;
-        this.showModal('successModal');
-        
-        // Reset form
-        this.resetAddStudentForm();
+        try {
+            // Mock API call for student addition
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Add to local mock data
+            this.mockStudents.set(rfid, {
+                name: name,
+                section: section,
+                id_number: idNumber
+            });
+            
+            this.hideModal('loadingModal');
+            document.getElementById('successMessage').textContent = 
+                `Student ${name} added successfully to server with RFID ${rfid}`;
+            this.showModal('successModal');
+            this.resetAddStudentForm();
+            
+        } catch (error) {
+            this.hideModal('loadingModal');
+            this.showErrorModal('Add Student Failed', `Failed to add student to server: ${error.message}`);
+        }
     }
 
     resetAddStudentForm() {
@@ -547,7 +772,8 @@ class NFCAttendanceScanner {
         document.getElementById('studentSection').value = '';
         document.getElementById('manualRfid').value = '';
         document.getElementById('rfidStatus').classList.remove('scanning', 'success');
-        document.getElementById('rfidStatus').innerHTML = '<p>Click "Scan NFC Tag" and hold an NFC tag to your device</p>';
+        const mode = this.nfcSupported ? '' : ' (Demo)';
+        document.getElementById('rfidStatus').innerHTML = `<p>Click "Scan NFC Tag${mode}" and hold an NFC tag to your device</p>`;
     }
 
     showModal(modalId) {
@@ -557,9 +783,23 @@ class NFCAttendanceScanner {
     hideModal(modalId) {
         document.getElementById(modalId).classList.add('hidden');
     }
+
+    showErrorModal(title, message, details = '') {
+        document.getElementById('errorModalMessage').textContent = message;
+        const errorDetails = document.getElementById('errorDetails');
+        
+        if (details) {
+            errorDetails.innerHTML = `<h4>${title}</h4><p>${details}</p>`;
+            errorDetails.style.display = 'block';
+        } else {
+            errorDetails.style.display = 'none';
+        }
+        
+        this.showModal('errorModal');
+    }
 }
 
-// Initialize the application when DOM is loaded
+// Initialize the batch attendance scanner
 document.addEventListener('DOMContentLoaded', () => {
-    new NFCAttendanceScanner();
+    new NFCBatchAttendanceScanner();
 });

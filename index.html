@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFC Attendance Scanner</title>
+    <title>NFC Attendance - Batch Scanner</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <h1>NFC Attendance Scanner</h1>
+            <p class="header-subtitle">Batch Collection for Render Deployment</p>
             <div class="nfc-status" id="nfcStatus">
                 <div class="nfc-status__indicator" id="nfcIndicator">
                     <span class="status-dot" id="statusDot"></span>
@@ -17,6 +18,22 @@
                 </div>
             </div>
         </header>
+
+        <!-- API Configuration Panel -->
+        <div class="api-config card" id="apiConfig">
+            <div class="card__body">
+                <h3>Server Configuration</h3>
+                <div class="form-group">
+                    <label class="form-label" for="serverUrl">Render Server URL</label>
+                    <input type="text" class="form-control" id="serverUrl" 
+                           value="https://your-app-name.onrender.com" 
+                           placeholder="https://your-app-name.onrender.com">
+                </div>
+                <div class="api-status" id="apiStatus">
+                    <span class="status status--info">Configure your Render server URL above</span>
+                </div>
+            </div>
+        </div>
 
         <!-- NFC Error Display -->
         <div class="error-panel hidden" id="errorPanel">
@@ -27,15 +44,18 @@
             </div>
         </div>
 
-        <!-- Main Application (hidden by default) -->
+        <!-- Main Application -->
         <main class="main-content hidden" id="mainContent">
             <!-- Mode Selection -->
             <div class="mode-selector" id="modeSelector">
                 <h2>Select Mode</h2>
+                <div class="batch-info">
+                    <p><strong>Batch Mode:</strong> Collect all attendance offline, then send to server in one request.</p>
+                </div>
                 <div class="mode-buttons">
                     <button class="btn btn--primary btn--lg" id="scanModeBtn">
                         <span class="btn-icon">📱</span>
-                        Scan Attendance
+                        Scan Attendance (Batch)
                     </button>
                     <button class="btn btn--secondary btn--lg" id="addStudentModeBtn">
                         <span class="btn-icon">👤</span>
@@ -44,11 +64,26 @@
                 </div>
             </div>
 
-            <!-- Scan Attendance Mode -->
+            <!-- Batch Scan Mode -->
             <div class="scan-mode hidden" id="scanMode">
                 <div class="mode-header">
                     <button class="btn btn--outline btn--sm" id="backToModeSelect">← Back</button>
-                    <h2>Scan Attendance</h2>
+                    <h2>Batch Attendance Collection</h2>
+                </div>
+
+                <div class="batch-workflow">
+                    <div class="workflow-step">
+                        <span class="step-number">1</span>
+                        <span class="step-text">Scan all NFC tags (collected offline)</span>
+                    </div>
+                    <div class="workflow-step">
+                        <span class="step-number">2</span>
+                        <span class="step-text">Review scanned students</span>
+                    </div>
+                    <div class="workflow-step">
+                        <span class="step-number">3</span>
+                        <span class="step-text">Send batch to server for verification</span>
+                    </div>
                 </div>
 
                 <div class="scan-controls">
@@ -56,7 +91,7 @@
                         Start NFC Scanning
                     </button>
                     <div class="scan-status" id="scanStatus">
-                        <p>Ready to scan. Press "Start NFC Scanning" to begin.</p>
+                        <p>Ready to scan. All scans collected offline until finalized.</p>
                     </div>
                 </div>
 
@@ -70,14 +105,36 @@
                             <span class="stat-number" id="uniqueScans">0</span>
                             <span class="stat-label">Unique Students</span>
                         </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="sessionTime">00:00</span>
+                            <span class="stat-label">Session Time</span>
+                        </div>
                     </div>
                     
                     <div class="scan-list-header">
-                        <h3>Scan Results</h3>
-                        <button class="btn btn--outline btn--sm" id="clearScansBtn">Clear All</button>
+                        <h3>Offline Collection</h3>
+                        <div class="header-controls">
+                            <button class="btn btn--outline btn--sm" id="clearScansBtn">Clear All</button>
+                        </div>
                     </div>
+
                     <div class="scan-list" id="scanList">
-                        <p class="empty-state">No scans yet. Hold an NFC tag to your device to scan.</p>
+                        <p class="empty-state">No scans yet. Start scanning to collect attendance data offline.</p>
+                    </div>
+
+                    <!-- Batch Actions -->
+                    <div class="batch-actions hidden" id="batchActions">
+                        <div class="batch-summary">
+                            <p><strong>Ready to send:</strong> <span id="batchCount">0</span> unique RFID tags to server</p>
+                        </div>
+                        <div class="batch-controls">
+                            <button class="btn btn--primary btn--lg btn--full-width" id="finalizeBatchBtn">
+                                Finalize & Send to Server
+                            </button>
+                            <button class="btn btn--secondary btn--sm btn--full-width" id="startNewSessionBtn">
+                                Clear Session & Start New
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -125,16 +182,32 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn--primary btn--lg btn--full-width" id="addStudentBtn">Add Student</button>
+                    <button class="btn btn--primary btn--lg btn--full-width" id="addStudentBtn">Add Student to Server</button>
                 </div>
             </div>
         </main>
+
+        <!-- Server Response Modal -->
+        <div class="modal hidden" id="serverResponseModal">
+            <div class="modal-content">
+                <h3>Server Response</h3>
+                <div class="response-summary" id="responseSummary"></div>
+                <div class="response-details" id="responseDetails"></div>
+                <div class="modal-actions">
+                    <button class="btn btn--primary" id="closeResponseModal">Close</button>
+                    <button class="btn btn--secondary" id="startNewSessionFromModal">Start New Session</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Loading Modal -->
         <div class="modal hidden" id="loadingModal">
             <div class="modal-content">
                 <div class="loading-spinner"></div>
-                <p>Processing NFC scan...</p>
+                <p id="loadingMessage">Processing batch request...</p>
+                <div class="loading-details">
+                    <p class="loading-subtitle">Sending to Render server - this may take a moment for cold starts</p>
+                </div>
             </div>
         </div>
 
@@ -144,6 +217,16 @@
                 <h3>Success!</h3>
                 <p id="successMessage">Operation completed successfully</p>
                 <button class="btn btn--primary" id="closeSuccessModal">OK</button>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div class="modal hidden" id="errorModal">
+            <div class="modal-content error-content">
+                <h3>Error</h3>
+                <p id="errorModalMessage">An error occurred</p>
+                <div class="error-details" id="errorDetails"></div>
+                <button class="btn btn--primary" id="closeErrorModal">OK</button>
             </div>
         </div>
     </div>

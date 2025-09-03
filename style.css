@@ -747,8 +747,30 @@ select.form-control {
 }
 
 .header h1 {
+  margin-bottom: var(--space-8);
+  color: var(--color-text);
+}
+
+.header-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--space-16) 0;
+  font-weight: var(--font-weight-medium);
+}
+
+/* API Configuration */
+.api-config {
+  margin-bottom: var(--space-24);
+}
+
+.api-config h3 {
   margin-bottom: var(--space-16);
   color: var(--color-text);
+}
+
+.api-status {
+  margin-top: var(--space-12);
+  text-align: center;
 }
 
 /* NFC Status Indicator */
@@ -832,7 +854,7 @@ select.form-control {
   font-size: var(--font-size-base);
 }
 
-.error-instructions ol {
+.error-instructions ol, .error-instructions ul {
   margin: 0;
   padding-left: var(--space-20);
   color: var(--color-text-secondary);
@@ -850,7 +872,21 @@ select.form-control {
 }
 
 .mode-selector h2 {
+  margin-bottom: var(--space-16);
+}
+
+.batch-info {
+  background-color: var(--color-bg-1);
+  border-radius: var(--radius-base);
+  padding: var(--space-16);
   margin-bottom: var(--space-24);
+  border: 1px solid rgba(var(--color-primary), 0.2);
+}
+
+.batch-info p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .mode-buttons {
@@ -884,6 +920,61 @@ select.form-control {
   flex: 1;
   text-align: center;
   margin: 0;
+}
+
+/* Batch Workflow */
+.batch-workflow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-32);
+  background-color: var(--color-bg-1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-20);
+  border: 1px solid rgba(var(--color-primary), 0.2);
+}
+
+.workflow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  gap: var(--space-8);
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: var(--color-primary);
+  color: var(--color-btn-primary-text);
+  border-radius: 50%;
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+}
+
+.step-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 100px;
+}
+
+@media (max-width: 640px) {
+  .batch-workflow {
+    flex-direction: column;
+    gap: var(--space-16);
+  }
+  
+  .workflow-step {
+    flex-direction: row;
+    text-align: left;
+  }
+  
+  .step-text {
+    max-width: none;
+  }
 }
 
 /* Scan Controls */
@@ -928,9 +1019,15 @@ select.form-control {
 /* Scan Results */
 .scan-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: var(--space-16);
   margin-bottom: var(--space-24);
+}
+
+@media (max-width: 640px) {
+  .scan-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-item {
@@ -966,12 +1063,18 @@ select.form-control {
   margin: 0;
 }
 
+.header-controls {
+  display: flex;
+  gap: var(--space-8);
+}
+
 .scan-list {
   background-color: var(--color-surface);
   border: 1px solid var(--color-card-border);
   border-radius: var(--radius-lg);
   min-height: 200px;
   padding: var(--space-16);
+  margin-bottom: var(--space-24);
 }
 
 .empty-state {
@@ -1025,6 +1128,31 @@ select.form-control {
 
 .scan-item__status {
   margin-left: var(--space-12);
+}
+
+/* Batch Actions */
+.batch-actions {
+  background-color: var(--color-bg-3);
+  border: 1px solid rgba(var(--color-success-rgb), 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--space-20);
+}
+
+.batch-summary {
+  text-align: center;
+  margin-bottom: var(--space-16);
+}
+
+.batch-summary p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-base);
+}
+
+.batch-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
 }
 
 /* Student Form */
@@ -1087,7 +1215,7 @@ select.form-control {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1102,8 +1230,10 @@ select.form-control {
   background-color: var(--color-surface);
   border-radius: var(--radius-lg);
   padding: var(--space-32);
-  max-width: 400px;
+  max-width: 500px;
   width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
   text-align: center;
   box-shadow: var(--shadow-lg);
 }
@@ -1118,6 +1248,88 @@ select.form-control {
   color: var(--color-text-secondary);
 }
 
+.error-content h3 {
+  color: var(--color-error);
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-12);
+  justify-content: center;
+  margin-top: var(--space-24);
+}
+
+.modal-actions .btn {
+  flex: 1;
+  max-width: 150px;
+}
+
+/* Response Details */
+.response-summary {
+  background-color: var(--color-bg-3);
+  border-radius: var(--radius-base);
+  padding: var(--space-16);
+  margin-bottom: var(--space-20);
+  text-align: left;
+}
+
+.response-details {
+  text-align: left;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.response-section {
+  margin-bottom: var(--space-20);
+}
+
+.response-section h4 {
+  color: var(--color-text);
+  margin-bottom: var(--space-12);
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.student-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.student-item {
+  padding: var(--space-12);
+  background-color: var(--color-background);
+  border-radius: var(--radius-base);
+  border: 1px solid var(--color-card-border);
+}
+
+.student-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.student-details {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-4);
+}
+
+.unrecognized-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.unrecognized-tag {
+  background-color: var(--color-bg-4);
+  color: var(--color-error);
+  padding: var(--space-6) var(--space-12);
+  border-radius: var(--radius-full);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  border: 1px solid rgba(var(--color-error-rgb), 0.3);
+}
+
 /* Loading Spinner */
 .loading-spinner {
   width: 40px;
@@ -1129,9 +1341,40 @@ select.form-control {
   margin: 0 auto var(--space-16) auto;
 }
 
+.loading-details {
+  margin-top: var(--space-16);
+}
+
+.loading-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: 0;
+  font-style: italic;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.error-details {
+  background-color: var(--color-bg-4);
+  border-radius: var(--radius-base);
+  padding: var(--space-16);
+  margin-top: var(--space-16);
+  text-align: left;
+  border: 1px solid rgba(var(--color-error-rgb), 0.3);
+}
+
+.error-details h4 {
+  color: var(--color-error);
+  margin-bottom: var(--space-8);
+}
+
+.error-details p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 /* Responsive Design */
@@ -1151,8 +1394,12 @@ select.form-control {
     gap: var(--space-12);
   }
   
-  .scan-stats {
-    grid-template-columns: 1fr;
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .modal-actions .btn {
+    max-width: none;
   }
 }
 
@@ -1170,6 +1417,15 @@ select.form-control {
 
 .btn.scanning:hover {
   background-color: var(--color-success);
+}
+
+.btn.batch-ready {
+  background-color: var(--color-warning);
+  color: var(--color-btn-primary-text);
+}
+
+.btn.batch-ready:hover {
+  background-color: rgba(var(--color-warning-rgb), 0.8);
 }
 
 /* Accessibility Improvements */
@@ -1192,6 +1448,10 @@ select.form-control {
   }
   
   .error-panel {
+    border-width: 2px;
+  }
+  
+  .batch-actions {
     border-width: 2px;
   }
 }
