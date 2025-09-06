@@ -472,6 +472,7 @@ class NFCAttendanceScanner {
                 throw new Error('Could not extract RFID from NFC tag');
             }
             
+            rfidTag = rfidTag.replace(/:/g, '');
             alert(rfidTag);
             this.processLocalScan(rfidTag);
             
