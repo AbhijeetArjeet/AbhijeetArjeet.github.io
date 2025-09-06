@@ -40,12 +40,12 @@
           return;
         }
 
-        if (data && data.class) {
-            const { section_name, classroom_name, start_time, end_time, schedule_id } = data.class;
+        if (data && data.section_name) {
+            const { section_name, room_number, start_time, end_time, schedule_id } = data;
             // Save schedule info to sessionStorage for next page
             sessionStorage.setItem("schedule_id", schedule_id);
             sessionStorage.setItem("section_name", section_name);
-            sessionStorage.setItem("classroom_name", classroom_name);
+            sessionStorage.setItem("classroom_number", room_number);
 
             document.getElementById("attendanceBtn").style.display = "block";
             document.getElementById("attendanceBtn").onclick = () => {

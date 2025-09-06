@@ -8,8 +8,8 @@
 }
 
 body {
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background-color: #ffffff;
+    font-family: 'Poppins', 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
     color: #202124;
     min-height: 100vh;
     display: flex;
@@ -25,7 +25,7 @@ body {
     background: #ffffff;
     border: 1px solid #dadce0;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.24);
     padding: 48px 40px 36px;
     width: 100%;
     max-width: 450px;

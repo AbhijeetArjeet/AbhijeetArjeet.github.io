@@ -1,4 +1,3 @@
-// NFC Attendance Scanner with Bulk Submission (Freeze-then-Submit)
 class NFCAttendanceScanner {
     constructor() {
         this.nfcSupported = false;
@@ -9,13 +8,11 @@ class NFCAttendanceScanner {
         this.scanTimeout = null;
         this.selectedScheduleId = null;
         this.schedules = [];
-        this.isFrozen = false; // NEW: Track if attendance is frozen
-        this.bulkSubmitted = false; // NEW: Track if bulk has been submitted
+        this.isFrozen = false;
+        this.bulkSubmitted = false;
         
-        // API Configuration
         this.API_BASE_URL = 'https://gameocoder-backend.onrender.com/faculty'; // Simplified for local server
         
-        // Statistics
         this.stats = {
             total: 0,
             unique: 0,
@@ -33,36 +30,28 @@ class NFCAttendanceScanner {
     }
 
     bindEvents() {
-        // Mode selection
         document.getElementById('scanModeBtn').addEventListener('click', () => this.showScanMode());
         document.getElementById('addStudentModeBtn').addEventListener('click', () => this.showAddStudentMode());
         document.getElementById('retryBtn').addEventListener('click', () => this.checkNFCSupport());
 
-        // Back buttons
         document.getElementById('backToModeSelect').addEventListener('click', () => this.showModeSelector());
         document.getElementById('backToModeSelect2').addEventListener('click', () => this.showModeSelector());
 
-        // Schedule selection
         document.getElementById('scheduleSelect').addEventListener('change', (e) => this.selectSchedule(e.target.value));
         document.getElementById('refreshSchedules').addEventListener('click', () => this.loadSchedules());
 
-        // Scan mode controls
         document.getElementById('startScanBtn').addEventListener('click', () => this.startNFCScanning());
         document.getElementById('clearScansBtn').addEventListener('click', () => this.clearScans());
-        
-        // NEW: Bulk attendance controls
+
         document.getElementById('freezeAttendanceBtn').addEventListener('click', () => this.freezeAttendance());
         document.getElementById('submitAttendanceBtn').addEventListener('click', () => this.submitBulkAttendance());
 
-        // Add student mode
         document.getElementById('scanRfidBtn').addEventListener('click', () => this.scanRFIDForStudent());
         document.getElementById('addStudentBtn').addEventListener('click', () => this.addStudent());
 
-        // Modal controls
         document.getElementById('closeSuccessModal').addEventListener('click', () => this.hideModal('successModal'));
     }
 
-    // API Methods
     async apiCall(endpoint, method = 'GET', data = null) {
         const config = {
             method,
@@ -100,7 +89,6 @@ class NFCAttendanceScanner {
             this.hideModal('loadingModal');
             console.error('Failed to load schedules:', error);
             this.showError('Failed to load schedules. Using offline mode.');
-            // Fallback to mock data for offline testing
             this.schedules = [
                 {
                     schedule_id: 1,
@@ -155,36 +143,30 @@ class NFCAttendanceScanner {
         }
     }
 
-    // NEW: Update bulk control buttons based on state
     updateBulkControls() {
         const freezeBtn = document.getElementById('freezeAttendanceBtn');
         const submitBtn = document.getElementById('submitAttendanceBtn');
         
         if (!this.selectedScheduleId) {
-            // No schedule selected
             freezeBtn.style.display = 'none';
             submitBtn.style.display = 'none';
             return;
         }
 
         if (!this.isFrozen) {
-            // Not frozen yet - show freeze button only if there are scans
             freezeBtn.style.display = this.scanResults.size > 0 ? 'inline-block' : 'none';
             submitBtn.style.display = 'none';
             freezeBtn.textContent = `Freeze Attendance (${this.scanResults.size} scans)`;
         } else if (!this.bulkSubmitted) {
-            // Frozen but not submitted - show submit button
             freezeBtn.style.display = 'none';
             submitBtn.style.display = 'inline-block';
             submitBtn.textContent = `Submit Attendance (${this.scanResults.size} students)`;
         } else {
-            // Already submitted - hide both buttons
             freezeBtn.style.display = 'none';
             submitBtn.style.display = 'none';
         }
     }
 
-    // NEW: Freeze attendance functionality
     freezeAttendance() {
         if (this.scanResults.size === 0) {
             this.showError('No attendance scans to freeze');
@@ -192,12 +174,11 @@ class NFCAttendanceScanner {
         }
 
         this.isFrozen = true;
-        this.stopScanning(); // Stop any ongoing scanning
+        this.stopScanning();
         
         this.updateScanStatus('🔒 Attendance FROZEN! No more scans will be accepted. Review the list below and click "Submit Attendance" to finalize.', false);
         this.updateBulkControls();
         
-        // Disable start scan button
         const startScanBtn = document.getElementById('startScanBtn');
         startScanBtn.disabled = true;
         startScanBtn.textContent = 'Attendance Frozen - No More Scans';
@@ -207,7 +188,6 @@ class NFCAttendanceScanner {
             `Attendance frozen with ${this.scanResults.size} students. Click "Submit Attendance" to send to server.`;
     }
 
-    // NEW: Submit bulk attendance to server
     async submitBulkAttendance() {
         if (this.scanResults.size === 0) {
             this.showError('No attendance data to submit');
@@ -222,7 +202,6 @@ class NFCAttendanceScanner {
         this.showLoading('Submitting attendance to server...');
 
         try {
-            // Prepare attendance data array
             const attendanceData = Array.from(this.scanResults.values()).map(scan => ({
                 rfid_tag: scan.rfid,
                 timestamp: scan.timestamp.toISOString()
@@ -233,7 +212,6 @@ class NFCAttendanceScanner {
                 attendance_data: attendanceData
             };
 
-            // Submit to server
             const result = await this.apiCall('/bulk-attendance', 'POST', payload);
             
             this.hideModal('loadingModal');
@@ -242,7 +220,6 @@ class NFCAttendanceScanner {
                 this.bulkSubmitted = true;
                 this.updateBulkControls();
                 
-                // Update scan results with server response
                 if (result.results) {
                     result.results.forEach(serverResult => {
                         const localScan = this.scanResults.get(serverResult.rfid_tag);
@@ -285,37 +262,30 @@ class NFCAttendanceScanner {
         }
     }
 
-    // NFC Support Check (keeping existing implementation)
     async checkNFCSupport() {
         this.updateNFCStatus('loading', 'Checking NFC support...');
         
         try {
-            // Check HTTPS requirement
             if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
                 throw new Error('HTTPS_REQUIRED');
             }
 
-            // Check Web NFC API support
             if (!('NDEFReader' in window)) {
                 throw new Error('NOT_SUPPORTED');
             }
 
-            // Test NFC availability with a more robust approach
             const reader = new NDEFReader();
             const controller = new AbortController();
             
-            // Set a timeout for the NFC check
             const checkTimeout = setTimeout(() => {
                 controller.abort();
             }, 3000);
 
             try {
-                // Try to start scanning briefly to test NFC availability
                 await reader.scan({ signal: controller.signal });
                 
-                // If we reach here without error, NFC is likely available
                 clearTimeout(checkTimeout);
-                controller.abort(); // Stop the test scan
+                controller.abort();
                 
                 this.nfcSupported = true;
                 this.nfcEnabled = true;
@@ -326,13 +296,11 @@ class NFCAttendanceScanner {
                 clearTimeout(checkTimeout);
                 
                 if (error.name === 'AbortError') {
-                    // Timeout occurred - assume NFC is available but we can't test definitively
                     this.nfcSupported = true;
                     this.nfcEnabled = true;
                     this.updateNFCStatus('success', 'NFC Ready (assumed)');
                     this.showMainContent();
                 } else {
-                    // Handle specific NFC errors
                     throw error;
                 }
             }
@@ -402,7 +370,6 @@ class NFCAttendanceScanner {
         document.getElementById('mainContent').classList.remove('hidden');
     }
 
-    // UI Navigation
     showScanMode() {
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('scanMode').classList.remove('hidden');
@@ -422,7 +389,6 @@ class NFCAttendanceScanner {
         this.stopScanning();
     }
 
-    // NFC Scanning
     async startNFCScanning() {
         if (this.isFrozen) {
             this.showError('Attendance is frozen. No more scans allowed.');
@@ -538,33 +504,28 @@ class NFCAttendanceScanner {
         return Math.abs(hash).toString(16).toUpperCase().padStart(8, '0').slice(0, 8);
     }
 
-    // NEW: Process scan locally (no API call)
     processLocalScan(rfidTag) {
         const timestamp = new Date();
         
-        // Check if already scanned
         const isDuplicate = this.scanResults.has(rfidTag);
         
-        // Store scan locally
         const scanData = {
             rfid: rfidTag,
             timestamp: timestamp,
-            student: null, // Will be populated when submitted to server
-            status: 'pending', // Local status
+            student: null,
+            status: 'pending',
             message: isDuplicate ? 'Duplicate scan (will be ignored)' : 'Scan recorded locally',
             isDuplicate: isDuplicate
         };
         
         this.scanResults.set(rfidTag, scanData);
         
-        // Update statistics
         this.stats.total++;
         if (!isDuplicate) {
             this.stats.unique++;
         }
-        this.stats.successful++; // All local scans are "successful"
-        
-        // Show scan feedback
+        this.stats.successful++;
+
         let message = `✅ Scanned: ${rfidTag}`;
         if (isDuplicate) {
             message += '\n⚠️ Duplicate detected - will be ignored';
@@ -622,9 +583,9 @@ class NFCAttendanceScanner {
             return;
         }
 
-        const scansArray = Array.from(this.scanResults.values()).reverse(); // Most recent first
+        const scansArray = Array.from(this.scanResults.values()).reverse();
         scanList.innerHTML = scansArray.map(scan => {
-            let statusIcon = '📱'; // Default for local scans
+            let statusIcon = '📱';
             let statusClass = 'local';
             
             if (scan.status === 'success') {
@@ -670,14 +631,12 @@ class NFCAttendanceScanner {
             this.updateScanStatus('Scan results cleared. Ready to scan.');
             this.updateBulkControls();
             
-            // Re-enable scanning
             const startScanBtn = document.getElementById('startScanBtn');
             startScanBtn.disabled = !this.selectedScheduleId;
             startScanBtn.textContent = 'Start NFC Scanning';
         }
     }
 
-    // Add Student Functionality
     async scanRFIDForStudent() {
         const scanRfidBtn = document.getElementById('scanRfidBtn');
         const rfidStatus = document.getElementById('rfidStatus');
@@ -779,7 +738,6 @@ class NFCAttendanceScanner {
         document.getElementById('rfidStatus').innerHTML = '<p>Click "Scan NFC Tag" and hold an NFC tag to your device</p>';
     }
 
-    // UI Helper Methods
     showModal(modalId) {
         document.getElementById(modalId).classList.remove('hidden');
     }
@@ -794,11 +752,10 @@ class NFCAttendanceScanner {
     }
 
     showError(message) {
-        alert(message); // Replace with a proper error modal if needed
+        alert(message);
     }
 }
 
-// Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new NFCAttendanceScanner();
 });
