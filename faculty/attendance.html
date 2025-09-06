@@ -39,6 +39,9 @@
       const section_name = sessionStorage.getItem("section_name");
       const classroom_name = sessionStorage.getItem("classroom_number");
 
+      console.log(token);
+      console.log(schedule_id);
+
       if (!token || !schedule_id) {
         alert("Invalid access.");
         window.location.href = "../index.html";
