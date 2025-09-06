@@ -34,7 +34,7 @@
 
   <script>
     async function loadAttendance() {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       const schedule_id = sessionStorage.getItem("schedule_id");
       const section_name = sessionStorage.getItem("section_name");
       const classroom_name = sessionStorage.getItem("classroom_number");
@@ -76,7 +76,7 @@
 
     // Finalize Attendance
     document.getElementById("finalizeBtn").addEventListener("click", async () => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       const schedule_id = sessionStorage.getItem("schedule_id");
 
       const rows = document.querySelectorAll("#attendance-table tbody tr");
