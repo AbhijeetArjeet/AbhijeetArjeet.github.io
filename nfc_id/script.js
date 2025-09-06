@@ -464,15 +464,15 @@ class NFCAttendanceScanner {
                     }
                 }
             }
-            alert(rfidTag);
             if (!rfidTag && event.message) {
                 rfidTag = this.generateRFIDFromNFCData(event);
             }
-
+            
             if (!rfidTag) {
                 throw new Error('Could not extract RFID from NFC tag');
             }
-
+            
+            alert(rfidTag);
             this.processLocalScan(rfidTag);
             
         } catch (error) {
