@@ -366,22 +366,17 @@ class NFCAttendanceScanner {
         statusText.textContent = message;
     }
 
-    showMainContent() {
-        document.getElementById('mainContent').classList.remove('hidden');
-    }
-
+    showMainContent() {document.getElementById('mainContent').classList.remove('hidden');}
     showScanMode() {
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('scanMode').classList.remove('hidden');
         document.getElementById('addStudentMode').classList.add('hidden');
     }
-
     showAddStudentMode() {
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('scanMode').classList.add('hidden');
         document.getElementById('addStudentMode').classList.remove('hidden');
     }
-
     showModeSelector() {
         document.getElementById('modeSelector').classList.remove('hidden');
         document.getElementById('scanMode').classList.add('hidden');
@@ -469,7 +464,7 @@ class NFCAttendanceScanner {
                     }
                 }
             }
-
+            alert(rfidTag);
             if (!rfidTag && event.message) {
                 rfidTag = this.generateRFIDFromNFCData(event);
             }
@@ -490,10 +485,13 @@ class NFCAttendanceScanner {
         let dataString = '';
         if (event.serialNumber) {
             dataString = event.serialNumber;
+            alert('Using 1');
         } else if (event.message && event.message.records) {
             dataString = event.message.records.length.toString();
+            alert('Using 2');
         } else {
             dataString = Date.now().toString();
+            alert('Using 3');
         }
 
         let hash = 0;
