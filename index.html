@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enhanced Attendance System</title>
+
+  <!-- External Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <script>
+    // API Configuration
+    const API_CONFIG = {
+      BASE_URL: window.location.hostname === 'localhost'
+        ? 'http://localhost:5000'
+        : 'https://attendance-backend.onrender.com',
+      ENDPOINTS: {
+        LOGIN: '/api/auth/login',
+        STUDENTS: '/api/students/enrolled',
+        STUDENT_ENROLL: '/api/students/enroll',
+        ATTENDANCE_SAVE: '/api/attendance/save',
+        ANALYTICS: '/api/attendance/analytics',
+      }
+    };
+  </script>
+</head>
+<body>
+  <div id="statusContainer" class="status-container"></div>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🎓 Attendance System</h1>
+      <div class="header-actions">
+        <span id="currentTime"></span>
+        <div class="real-time-indicator">LIVE</div>
+        <button id="logoutBtn" class="btn btn-warning hidden">Logout</button>
+      </div>
+    </header>
+
+    <!-- Login Section -->
+    <section id="loginSection" class="login-section">
+      <div class="login-form">
+        <h2>🔐 Login</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input id="username" type="text" placeholder="Username" required/>
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="Password" required/>
+          </div>
+          <button type="submit" class="btn">Login</button>
+        </form>
+        <p>Demo: teacher/teach123 or admin/admin123</p>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="hidden">
+      <!-- Navigation -->
+      <nav class="dashboard-nav">
+        <button class="nav-tab active" data-tab="attendance">Live Attendance</button>
+        <button class="nav-tab" data-tab="analytics">Analytics</button>
+        <button class="nav-tab" data-tab="students">Students</button>
+        <button class="nav-tab" data-tab="reports">Reports</button>
+        <button class="nav-tab" data-tab="settings">Settings</button>
+      </nav>
+
+      <!-- Content -->
+      <div class="dashboard-content">
+        <!-- Attendance Tab -->
+        <div id="attendanceTab" class="dashboard-tab active">
+          <!-- Video & Session Controls -->
+          <div class="video-section">
+            <h3>📹 Face Detection</h3>
+            <div class="video-controls">
+              <button id="webcamBtn" class="video-source-btn">Use Camera</button>
+              <button id="screenCaptureBtn" class="video-source-btn">Capture Screen</button>
+              <div id="detectionIndicator" class="real-time-indicator detection-inactive">Detecting</div>
+            </div>
+            <div id="videoSection" class="video-container hidden">
+              <video id="videoFeed" autoplay muted></video>
+            </div>
+          </div>
+
+          <div class="session-controls">
+            <h3>Session Management</h3>
+            <form class="session-form">
+              <div class="form-group">
+                <label for="subjectInput">Subject</label>
+                <input id="subjectInput" type="text" placeholder="Subject"/>
+              </div>
+              <div class="form-group">
+                <label for="sectionSelect">Section</label>
+                <select id="sectionSelect">
+                  <option value="S33">S33</option>
+                  <option value="S34">S34</option>
+                  <option value="S35">S35</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sessionTypeSelect">Type</label>
+                <select id="sessionTypeSelect">
+                  <option value="offline">Offline (5 checks)</option>
+                  <option value="online">Online (Live)</option>
+                </select>
+              </div>
+              <button id="startSessionBtn" type="button" class="btn btn-success" disabled>Start</button>
+              <button id="endSessionBtn" type="button" class="btn btn-danger" disabled>End</button>
+            </form>
+          </div>
+
+          <div id="sessionStatus" class="session-status hidden">
+            <h4>Status: <span id="currentSessionStatus">INACTIVE</span></h4>
+            <p>Elapsed: <span id="timeElapsed">0</span>m | Remaining: <span id="timeRemaining">50</span>m</p>
+            <div class="session-progress"><div id="sessionProgress" class="session-progress-bar"></div></div>
+          </div>
+
+          <div class="attendance-table-container">
+            <h3>Live Attendance</h3>
+            <div class="kpi-grid">
+              <div class="kpi-card success"><h3 id="presentCount">0</h3><p>Present</p></div>
+              <div class="kpi-card warning"><h3 id="partialCount">0</h3><p>Partial</p></div>
+              <div class="kpi-card danger"><h3 id="absentCount">0</h3><p>Absent</p></div>
+            </div>
+            <table class="attendance-table">
+              <thead>
+                <tr><th>Name</th><th>Status</th><th>Detections</th><th>Confidence</th><th>First Seen</th><th>Last Seen</th></tr>
+              </thead>
+              <tbody id="attendanceBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analyticsTab" class="dashboard-tab hidden">
+          <div class="kpi-grid">
+            <div class="kpi-card"><h3 id="engagementScore">0</h3><p>Engagement</p></div>
+            <div class="kpi-card danger"><h3 id="riskStudents">0</h3><p>At-Risk</p></div>
+            <div class="kpi-card success"><h3 id="improvementTrend">0%</h3><p>Improvement</p></div>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-container"><h3>Attendance Trends</h3><canvas id="attendanceTrendChart"></canvas></div>
+            <div class="chart-container"><h3>Engagement Metrics</h3><canvas id="engagementChart"></canvas></div>
+            <div class="chart-container"><h3>Weekly Patterns</h3><canvas id="weeklyPatternsChart"></canvas></div>
+            <div class="chart-container"><h3>Risk Distribution</h3><canvas id="riskPredictionChart"></canvas></div>
+            <div class="chart-container"><h3>Performance Correlation</h3><canvas id="performanceChart"></canvas></div>
+            <div class="chart-container full-width"><h3>Attendance Heatmap</h3><div id="attendanceHeatmap"></div></div>
+          </div>
+          <div class="text-center">
+            <button id="exportPDFBtn" class="btn btn-success">Export PDF</button>
+            <button id="exportExcelBtn" class="btn btn-warning">Export Excel</button>
+          </div>
+        </div>
+
+        <!-- Students Tab -->
+        <div id="studentsTab" class="dashboard-tab hidden">
+          <div class="session-controls">
+            <h3>Enroll Student</h3>
+            <button id="enrollStudentBtn" class="btn btn-success">New Student</button>
+          </div>
+          <div class="attendance-table-container">
+            <h3>Enrolled Students</h3>
+            <div id="enrolledStudentsList"></div>
+          </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reportsTab" class="dashboard-tab hidden">
+          <div class="charts-grid">
+            <div class="chart-container"><h3>Monthly Report</h3><p>Generate detailed monthly attendance reports.</p></div>
+            <div class="chart-container"><h3>Performance Analysis</h3><p>Correlation of attendance vs performance.</p></div>
+            <div class="chart-container"><h3>Early Warning</h3><p>Identify at-risk students early.</p></div>
+            <div class="chart-container"><h3>Engagement Analytics</h3><p>Deep dive into student engagement patterns.</p></div>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settingsTab" class="dashboard-tab hidden">
+          <div class="session-controls">
+            <h3>Settings</h3>
+            <div class="session-form">
+              <div class="form-group">
+                <label for="detectionThreshold">Detection Confidence</label>
+                <input id="detectionThreshold" type="range" min="0.5" max="1.0" step="0.05" value="0.65"/>
+                <span id="thresholdValue">0.65</span>
+              </div>
+              <div class="form-group">
+                <label for="recognitionThreshold">Recognition Threshold</label>
+                <input id="recognitionThreshold" type="range" min="0.3" max="0.8" step="0.05" value="0.55"/>
+                <span id="recognitionValue">0.55</span>
+              </div>
+              <div class="form-group">
+                <label><input id="realTimeToggle" type="checkbox"/> Enable Real-time</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Enrollment Modal -->
+  <div id="enrollmentModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h3>Enroll Student Face</h3>
+      <div class="form-group">
+        <label for="enrollStudentName">Name</label>
+        <input id="enrollStudentName" type="text" placeholder="Student Name"/>
+      </div>
+      <div class="form-group">
+        <label for="enrollStudentId">ID</label>
+        <input id="enrollStudentId" type="text" placeholder="Student ID"/>
+      </div>
+      <video id="enrollmentVideo" class="enrollment-video" autoplay></video>
+      <canvas id="enrollmentCanvas" class="enrollment-canvas"></canvas>
+      <button id="capturePhotoBtn" class="btn btn-success">Capture Photo</button>
+    </div>
+  </div>
+
+  <!-- Application Scripts -->
+  <script src="js/mediapipe_face_system.js"></script>
+  <script src="js/analytics_dashboard.js"></script>
+  <script src="js/enhanced_attendance_app.js"></script>
+
+  <script>
+    // Modal Close
+    document.querySelector('.close').onclick = () =>
+      document.getElementById('enrollmentModal').style.display = 'none';
+    window.onclick = (e) => {
+      const modal = document.getElementById('enrollmentModal');
+      if (e.target === modal) modal.style.display = 'none';
+    };
+
+    // Threshold sliders
+    document.getElementById('detectionThreshold').oninput = function(){
+      document.getElementById('thresholdValue').textContent = this.value;
+    };
+    document.getElementById('recognitionThreshold').oninput = function(){
+      document.getElementById('recognitionValue').textContent = this.value;
+    };
+  </script>
+</body>
+</html>

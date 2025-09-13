@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: attendance-frontend
+    env: static
+    plan: free
+    buildCommand: ""
+    staticPublishPath: ./
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /enhanced_attendance_system.html
